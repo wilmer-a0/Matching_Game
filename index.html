@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Emparejamiento Bíblico</title>
+    <style>
+        :root {
+            --primary: #0A4F6E;
+            --primary-light: #E8F4F8;
+            --primary-hover: #0D6B94;
+            --bg: #F9F9F9;
+            --card-bg: #FFFFFF;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #E0E0E0;
+            --danger: #D32F2F;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            position: relative;
+            gap: 10rem;
+        }
+
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-width: 0; /* Prevents flex items from overflowing */
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .column-title {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .btn-add {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-add:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.8rem;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            min-height: 50px;
+        }
+
+        .item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .item-text {
+            flex: 1;
+            font-size: 1rem;
+            padding: 0 0.5rem;
+            word-wrap: break-word;
+        }
+
+        .dot {
+            width: 16px;
+            height: 16px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            cursor: crosshair;
+            transition: transform 0.2s, background-color 0.2s;
+            flex-shrink: 0;
+            touch-action: none;
+        }
+
+        .dot:hover {
+            transform: scale(1.3);
+            background-color: var(--primary-hover);
+        }
+
+        .dot.active {
+            background-color: #FF9800;
+            transform: scale(1.4);
+        }
+
+        .left-col .item {
+            justify-content: flex-start;
+        }
+        .left-col .dot {
+            order: 2;
+            margin-right: -24px;
+            margin-left: 8px;
+        }
+
+        .right-col .item {
+            justify-content: flex-end;
+        }
+        .right-col .dot {
+            order: -1;
+            margin-left: -24px;
+            margin-right: 8px;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            padding: 4px;
+            margin: 0 4px;
+            border-radius: 4px;
+            transition: color 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-delete:hover {
+            color: var(--danger);
+            background-color: #FFEBEE;
+        }
+
+        .left-col .btn-delete {
+            order: -1;
+            margin-left: -8px;
+            margin-right: 8px;
+        }
+
+        .right-col .btn-delete {
+            order: 2;
+            margin-right: -8px;
+            margin-left: 8px;
+        }
+
+        #svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through to dots */
+            z-index: 10;
+        }
+
+        #svg-layer line {
+            pointer-events: stroke; /* Allow clicking on the line itself */
+            cursor: pointer;
+            transition: stroke-width 0.2s;
+        }
+
+        #svg-layer line:hover {
+            stroke-width: 6;
+            stroke: var(--danger);
+        }
+
+        .input-group {
+            display: none;
+            margin-top: 0.5rem;
+            gap: 0.5rem;
+        }
+
+        .input-group.active {
+            display: flex;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .btn-confirm {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-cancel {
+            background-color: #eee;
+            color: var(--text);
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+
+        .reset-btn {
+            display: block;
+            margin: 2rem auto;
+            background-color: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                gap: 4rem; /* More space for lines on mobile */
+                padding: 0 0.5rem;
+            }
+            .item {
+                padding: 0.8rem;
+                min-height: 50px;
+            }
+            .item-text {
+                font-size: 0.85rem;
+            }
+            header h1 {
+                font-size: 1.2rem;
+            }
+            header p {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Para Emparejar</h1>
+    <p>Instrucciones: Trace una línea desde el punto de un elemento de la izquierda hasta su correspondiente en la derecha. Toque o haga clic en el punto para iniciar la línea, y suelte sobre el punto de destino para conectar. Toque una línea ya creada para eliminarla.</p>
+</header>
+
+<div class="container" id="container">
+    <svg id="svg-layer"></svg>
+    
+    <div class="column left-col" id="left-col">
+        <div class="column-header">
+            <span class="column-title">Temas</span>
+            <button class="btn-add" onclick="toggleInput('left')">+ Agregar</button>
+        </div>
+        <div class="input-group" id="input-left">
+            <input type="text" id="text-left" placeholder="Nuevo concepto...">
+            <button class="btn-confirm" onclick="addItem('left')">OK</button>
+            <button class="btn-cancel" onclick="toggleInput('left')">✕</button>
+        </div>
+        <div id="left-items"></div>
+    </div>
+
+    <div class="column right-col" id="right-col">
+        <div class="column-header">
+            <span class="column-title">Textos B.</span>
+            <button class="btn-add" onclick="toggleInput('right')">+</button>
+        </div>
+        <div class="input-group" id="input-right">
+            <input type="text" id="text-right" placeholder="Nuevo texto bíblico...">
+            <button class="btn-confirm" onclick="addItem('right')">OK</button>
+            <button class="btn-cancel" onclick="toggleInput('right')">✕</button>
+        </div>
+        <div id="right-items"></div>
+    </div>
+</div>
+
+<button class="reset-btn" onclick="resetConnections()">Borrar todas las líneas</button>
+
+<script>
+    // Datos iniciales
+    const initialLeft = [
+        "Alcohol",
+        "Amistad con el mundo",
+        "Dinero",
+        "Entretenimiento",
+        "Honradez",
+        "Idolatría",
+        "Malas acciones",
+        "Mentira",
+        "Neutralidad",
+        "Perdón",
+        "Pornografía",
+        "Religión falsa; unión de fes",
+        "Resolver desacuerdos"
+    ];
+
+    const initialRight = [
+        "Job 31:1; Sl 101:2, 3; Mt 5:27-30",
+        "Dt 32:16, 17; Mt 7:13, 14",
+        "Snt 4:4; 1Jn 5:19",
+        "Sl 15:1-3; Ro 1:31, 32",
+        "Pr 20:22; Pr 10:12",
+        "Ec 7:12; Sl 37:21",
+        "Mt 5:27-29; Mt 4:8-10",
+        "Sl 86:5; Jn 1:29",
+        "Mt 5:22; Ef 6:9",
+        "Heb 13:18",
+        "1Cor 10:14",
+        "Sl 104:14, 15; Pr 20:1",
+        "Ecl 2:24; 4:6"
+    ];
+
+    // Estado de la aplicación
+    let leftItems = [...initialLeft];
+    let rightItems = shuffleArray([...initialRight]); // Mezclar para que queden diagonales/equis
+    let connections = []; // {from: id, to: id}
+    let isDrawing = false;
+    let startDot = null;
+    let tempLine = null;
+    let itemIdCounter = 0;
+
+    // Función para mezclar array (Fisher-Yates)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // Generar ID único
+    function generateId() {
+        return 'item-' + (++itemIdCounter);
+    }
+
+    // Renderizar columnas
+    function render() {
+        const leftContainer = document.getElementById('left-items');
+        const rightContainer = document.getElementById('right-items');
+        
+        leftContainer.innerHTML = '';
+        rightContainer.innerHTML = '';
+
+        leftItems.forEach(text => {
+            leftContainer.appendChild(createItemElement(text, 'left'));
+        });
+
+        rightItems.forEach(text => {
+            rightContainer.appendChild(createItemElement(text, 'right'));
+        });
+
+        // Pequeño delay para asegurar que el DOM esté pintado antes de dibujar líneas
+        setTimeout(drawLines, 50);
+    }
+
+    function createItemElement(text, side) {
+        const id = generateId();
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.dataset.id = id;
+        div.dataset.side = side;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Eliminar elemento';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteItem(id, side);
+        };
+
+        const span = document.createElement('span');
+        span.className = 'item-text';
+        span.textContent = text;
+
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.dataset.id = id;
+        dot.dataset.side = side;
+        
+        // Eventos de ratón
+        dot.addEventListener('mousedown', startDrawing);
+        dot.addEventListener('mouseenter', (e) => {
+            if (isDrawing && startDot.dataset.side !== side) {
+                dot.classList.add('active');
+            }
+        });
+        dot.addEventListener('mouseleave', () => {
+            dot.classList.remove('active');
+        });
+
+        // Eventos táctiles
+        dot.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevenir scroll
+            startDrawing(e);
+        }, {passive: false});
+
+        if (side === 'left') {
+            div.appendChild(span);
+            div.appendChild(dot);
+            div.appendChild(deleteBtn);
+        } else {
+            div.appendChild(deleteBtn);
+            div.appendChild(dot);
+            div.appendChild(span);
+        }
+
+        return div;
+    }
+
+    function deleteItem(id, side) {
+        if (!confirm('¿Está seguro de que desea eliminar este elemento? Esta acción no se puede deshacer.')) {
+            return;
+        }
+        
+        if (side === 'left') {
+            leftItems = leftItems.filter((_, index) => {
+                // Nota: esta es una simplificación. En una app real, mapearíamos ID a texto.
+                // Aquí, como regeneramos todo, simplemente recargamos desde el DOM o manejamos mejor el estado.
+                return true; // Lo manejamos mejor abajo
+            });
+        }
+        
+        // Mejor enfoque: eliminar del DOM y del array de estado real
+        const itemEl = document.querySelector(`[data-id="${id}"]`);
+        if (itemEl) {
+            const text = itemEl.querySelector('.item-text').textContent;
+            if (side === 'left') {
+                leftItems = leftItems.filter(t => t !== text);
+            } else {
+                rightItems = rightItems.filter(t => t !== text);
+            }
+        }
+        
+        // Eliminar conexiones asociadas
+        connections = connections.filter(c => c.from !== id && c.to !== id);
+        
+        render();
+    }
+
+    function toggleInput(side) {
+        const inputGroup = document.getElementById(`input-${side}`);
+        inputGroup.classList.toggle('active');
+        if (inputGroup.classList.contains('active')) {
+            document.getElementById(`text-${side}`).focus();
+        }
+    }
+
+    function addItem(side) {
+        const input = document.getElementById(`text-${side}`);
+        const text = input.value.trim();
+        if (text) {
+            if (side === 'left') {
+                leftItems.push(text);
+            } else {
+                rightItems.push(text);
+            }
+            input.value = '';
+            toggleInput(side);
+            render();
+        }
+    }
+
+    // Lógica de dibujo
+    function getDotPosition(dot) {
+        const rect = dot.getBoundingClientRect();
+        const containerRect = document.getElementById('container').getBoundingClientRect();
+        return {
+            x: rect.left + rect.width / 2 - containerRect.left,
+            y: rect.top + rect.height / 2 - containerRect.top
+        };
+    }
+
+    function startDrawing(e) {
+        e.preventDefault();
+        const touch = e.touches ? e.touches[0] : e;
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (target && target.classList.contains('dot')) {
+            isDrawing = true;
+            startDot = target;
+            
+            const svg = document.getElementById('svg-layer');
+            tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            const pos = getDotPosition(startDot);
+            
+            tempLine.setAttribute('x1', pos.x);
+            tempLine.setAttribute('y1', pos.y);
+            tempLine.setAttribute('x2', pos.x);
+            tempLine.setAttribute('y2', pos.y);
+            tempLine.setAttribute('stroke', '#0A4F6E');
+            tempLine.setAttribute('stroke-width', '3');
+            tempLine.setAttribute('stroke-dasharray', '5,5'); // Línea punteada mientras se arrastra
+            
+            svg.appendChild(tempLine);
+        }
+    }
+
+    function draw(e) {
+        if (!isDrawing || !tempLine) return;
+        e.preventDefault();
+        
+        const touch = e.touches ? e.touches[0] : e;
+        const containerRect = document.getElementById('container').getBoundingClientRect();
+        
+        const x = touch.clientX - containerRect.left;
+        const y = touch.clientY - containerRect.top;
+        
+        tempLine.setAttribute('x2', x);
+        tempLine.setAttribute('y2', y);
+        
+        // Resaltar dot objetivo si está cerca
+        document.querySelectorAll('.dot').forEach(dot => {
+            if (dot.dataset.side !== startDot.dataset.side) {
+                const pos = getDotPosition(dot);
+                const dist = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
+                if (dist < 20) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    function endDrawing(e) {
+        if (!isDrawing) return;
+        
+        const touch = e.changedTouches ? e.changedTouches[0] : e;
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (target && target.classList.contains('dot') && target.dataset.side !== startDot.dataset.side) {
+            // Conexión válida
+            const fromId = startDot.dataset.side === 'left' ? startDot.dataset.id : target.dataset.id;
+            const toId = startDot.dataset.side === 'right' ? startDot.dataset.id : target.dataset.id;
+            
+            // Evitar duplicados
+            const exists = connections.some(c => c.from === fromId && c.to === toId);
+            if (!exists) {
+                connections.push({from: fromId, to: toId});
+            }
+        }
+        
+        // Limpiar
+        if (tempLine) {
+            tempLine.remove();
+            tempLine = null;
+        }
+        document.querySelectorAll('.dot').forEach(dot => dot.classList.remove('active'));
+        isDrawing = false;
+        startDot = null;
+        
+        drawLines();
+    }
+
+    function drawLines() {
+        const svg = document.getElementById('svg-layer');
+        // Mantener solo las líneas permanentes (eliminar temporales si las hubiera)
+        svg.innerHTML = '';
+        
+        const containerRect = document.getElementById('container').getBoundingClientRect();
+        
+        connections.forEach((conn, index) => {
+            const fromDot = document.querySelector(`[data-id="${conn.from}"] .dot`) || document.querySelector(`[data-id="${conn.from}"]`);
+            const toDot = document.querySelector(`[data-id="${conn.to}"] .dot`) || document.querySelector(`[data-id="${conn.to}"]`);
+            
+            if (!fromDot || !toDot) return; // Si se eliminó un elemento
+            
+            const pos1 = getDotPosition(fromDot);
+            const pos2 = getDotPosition(toDot);
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', pos1.x);
+            line.setAttribute('y1', pos1.y);
+            line.setAttribute('x2', pos2.x);
+            line.setAttribute('y2', pos2.y);
+            line.setAttribute('stroke', '#0A4F6E');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            line.dataset.index = index;
+            
+            // Click para eliminar línea
+            line.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('¿Desea eliminar esta conexión?')) {
+                    connections.splice(index, 1);
+                    drawLines();
+                }
+            });
+            
+            // Soporte táctil para eliminar línea (doble toque o toque largo, usaremos click simple por simplicidad)
+            line.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (confirm('¿Desea eliminar esta conexión?')) {
+                    connections.splice(index, 1);
+                    drawLines();
+                }
+            });
+            
+            svg.appendChild(line);
+        });
+    }
+
+    function resetConnections() {
+        if (connections.length === 0) return;
+        if (confirm('¿Está seguro de que desea borrar todas las líneas trazadas?')) {
+            connections = [];
+            drawLines();
+        }
+    }
+
+    // Event listeners globales
+    document.addEventListener('mousemove', draw);
+    document.addEventListener('mouseup', endDrawing);
+    document.addEventListener('touchmove', draw, {passive: false});
+    document.addEventListener('touchend', endDrawing);
+
+    // Redibujar al cambiar tamaño de ventana
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawLines, 100);
+    });
+
+    // Inicializar
+    render();
+    
+    // Permitir Enter en inputs
+    document.getElementById('text-left').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addItem('left');
+    });
+    document.getElementById('text-right').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addItem('right');
+    });
+
+</script>
+
+</body>
+</html>
